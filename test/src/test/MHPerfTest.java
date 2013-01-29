@@ -1,4 +1,4 @@
-package si.pele.mhaccess;
+package test;
 
 import si.pele.friendly.Friend;
 import si.pele.friendly.Friendly;
@@ -6,6 +6,10 @@ import si.pele.microbench.TestRunner;
 
 import java.lang.invoke.MethodHandle;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.IntFunction;
+import java.util.function.IntSupplier;
+
+import static si.pele.friendly.MHThrows.unchecked;
 
 /**
  * Tests method handle performance compared against direct method calls or field accesses
@@ -37,7 +41,7 @@ public class MHPerfTest extends TestRunner {
                 consume(mpt.testMethod());
             }
             catch (Throwable t) {
-                throw new Error(t);
+                throw unchecked(t);
             }
         }
     }
@@ -56,7 +60,7 @@ public class MHPerfTest extends TestRunner {
                 consume((int) testMethodMH.invokeExact(mpt));
             }
             catch (Throwable t) {
-                throw new Error(t);
+                throw unchecked(t);
             }
         }
     }
@@ -69,10 +73,10 @@ public class MHPerfTest extends TestRunner {
                 long oldseed = mpt.seed;
                 long nextseed = (oldseed * multiplier + addend) & mask;
                 mpt.seed = nextseed;
-                return (int)(nextseed >>> 16);
+                return (int) (nextseed >>> 16);
             }
             catch (Throwable t) {
-                throw new Error(t);
+                throw unchecked(t);
             }
         }
 
@@ -96,10 +100,10 @@ public class MHPerfTest extends TestRunner {
                 long oldseed = (long) seedGetter.invokeExact(mpt);
                 long nextseed = (oldseed * multiplier + addend) & mask;
                 seedSetter.invokeExact(mpt, nextseed);
-                return (int)(nextseed >>> 16);
+                return (int) (nextseed >>> 16);
             }
             catch (Throwable t) {
-                throw new Error(t);
+                throw unchecked(t);
             }
         }
 

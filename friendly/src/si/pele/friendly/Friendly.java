@@ -15,10 +15,10 @@ public class Friendly {
     private static final MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
     public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes) throws FriendlyException {
+        Class<?> cc = Reflection.getCallerClass(2);
         try {
-            return lookup
-                .in(Reflection.getCallerClass(2))
-                .unreflect(friendly(rcv.getDeclaredMethod(methodName, parameterTypes)));
+            return lookup.in(cc)
+                .unreflect(friendly(rcv.getDeclaredMethod(methodName, parameterTypes), cc));
         }
         catch (NoSuchMethodException | IllegalAccessException e) {
             throw new FriendlyException(e);
@@ -26,10 +26,10 @@ public class Friendly {
     }
 
     public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes) throws FriendlyException {
+        Class<?> cc = Reflection.getCallerClass(2);
         try {
-            return lookup
-                .in(Reflection.getCallerClass(2))
-                .unreflectConstructor(friendly(rcv.getDeclaredConstructor(parameterTypes)));
+            return lookup.in(cc)
+                .unreflectConstructor(friendly(rcv.getDeclaredConstructor(parameterTypes), cc));
         }
         catch (NoSuchMethodException | IllegalAccessException e) {
             throw new FriendlyException(e);
@@ -37,10 +37,10 @@ public class Friendly {
     }
 
     public static MethodHandle getter(Class<?> rcv, String fieldName) throws FriendlyException {
+        Class<?> cc = Reflection.getCallerClass(2);
         try {
-            return lookup
-                .in(Reflection.getCallerClass(2))
-                .unreflectGetter(friendly(rcv.getDeclaredField(fieldName)));
+            return lookup.in(cc)
+                .unreflectGetter(friendly(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException | IllegalAccessException e) {
             throw new FriendlyException(e);
@@ -48,21 +48,20 @@ public class Friendly {
     }
 
     public static MethodHandle setter(Class<?> rcv, String fieldName) throws FriendlyException {
+        Class<?> cc = Reflection.getCallerClass(2);
         try {
-            return lookup
-                .in(Reflection.getCallerClass(2))
-                .unreflectSetter(friendly(rcv.getDeclaredField(fieldName)));
+            return lookup.in(cc)
+                .unreflectSetter(friendly(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException | IllegalAccessException e) {
             throw new FriendlyException(e);
         }
     }
 
-    private static <A extends AccessibleObject> A friendly(A accessibleObject) {
+    private static <A extends AccessibleObject> A friendly(A accessibleObject, Class<?> callerClass) {
         Friend friendAnn = accessibleObject.getAnnotation(Friend.class);
         if (friendAnn != null) {
-            Class<?> cc = Reflection.getCallerClass(3);
-            if (contains(friendAnn.value(), cc)) {
+            if (contains(friendAnn.value(), callerClass)) {
                 accessibleObject.setAccessible(true);
             }
         }
