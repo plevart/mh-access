@@ -5,6 +5,8 @@ import sun.reflect.Reflection;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Objects;
 
 /**
@@ -61,11 +63,27 @@ public class Friendly {
     private static <A extends AccessibleObject> A friendly(A accessibleObject, Class<?> callerClass) {
         Friend friendAnn = accessibleObject.getAnnotation(Friend.class);
         if (friendAnn != null) {
-            if (contains(friendAnn.value(), callerClass)) {
+            if (contains(friendAnn.value(), callerClass) || privileged(accessibleObject, callerClass)) {
                 accessibleObject.setAccessible(true);
             }
         }
         return accessibleObject;
+    }
+
+    /**
+     * @return true if {@code callerClass} is implicitly allowed to access the {@code accessibleObject}
+     *         without the {@code accessibleObject} being annotated with @{@link Friend} pointing to {@code callerClass}.
+     */
+    private static boolean privileged(AccessibleObject accessibleObject, Class<?> callerClass) {
+        if (accessibleObject instanceof Method) {
+            Method m = (Method) accessibleObject;
+            return (
+                callerClass == FriendlyProxy.class &&
+                m.getDeclaringClass() == Proxy.class &&
+                m.getName().equals("defineClass0")
+            );
+        }
+        return false;
     }
 
     private static <E> boolean contains(E[] array, E element) {
