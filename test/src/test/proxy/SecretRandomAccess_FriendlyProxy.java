@@ -1,13 +1,13 @@
 package test.proxy;
 
-import si.pele.friendly.FriendlyProxy;
+import si.pele.friendly.FriendlyProxyFactory;
 import si.pele.friendly.MHThrows;
 
 import java.lang.invoke.MethodHandle;
 
 /**
  */
-public class SecretRandomAccess_FriendlyProxy extends FriendlyProxy implements SecretRandomAccess {
+public class SecretRandomAccess_FriendlyProxy implements SecretRandomAccess {
 
     private final MethodHandle mh1;
 

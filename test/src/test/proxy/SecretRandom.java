@@ -13,7 +13,7 @@ public class SecretRandom {
 
     private long seed;
 
-    @Friend(FriendlyClass.class)
+    @Friend(MyFriend.class)
     private int nextInt() {
         try {
             long nextseed = (seed * multiplier + addend) & mask;

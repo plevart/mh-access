@@ -16,50 +16,77 @@ import java.util.Objects;
 public class Friendly {
     private static final MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
-    public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes) throws FriendlyException {
+    public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes) throws IllegalArgumentException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
                 .unreflect(friendly(rcv.getDeclaredMethod(methodName, parameterTypes), cc));
         }
         catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new FriendlyException(e);
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
-    public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes) throws FriendlyException {
+    public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes) throws IllegalArgumentException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
                 .unreflectConstructor(friendly(rcv.getDeclaredConstructor(parameterTypes), cc));
         }
         catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new FriendlyException(e);
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
-    public static MethodHandle getter(Class<?> rcv, String fieldName) throws FriendlyException {
+    public static MethodHandle getter(Class<?> rcv, String fieldName) throws IllegalArgumentException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
                 .unreflectGetter(friendly(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new FriendlyException(e);
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
-    public static MethodHandle setter(Class<?> rcv, String fieldName) throws FriendlyException {
+    public static MethodHandle setter(Class<?> rcv, String fieldName) throws IllegalArgumentException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
                 .unreflectSetter(friendly(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new FriendlyException(e);
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
+    public static <I> I proxy(Class<I> intf) throws IllegalArgumentException {
+        Class<?> cc = Reflection.getCallerClass(2);
+        MethodHandles.Lookup ccLookup = lookup.in(cc);
+        FriendlyProxyFactory<? extends I> proxyFactory = FriendlyProxyFactory.getFactory(intf);
+        Method[] methods = proxyFactory.getTargetMethods();
+        MethodHandle[] mhs = new MethodHandle[methods.length];
+        for (int i = 0; i < methods.length; i++) {
+            try {
+                mhs[i] = ccLookup.unreflect(friendly(methods[i], cc));
+            }
+            catch (IllegalAccessException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+        }
+        return proxyFactory.createProxy(mhs);
+    }
+
+    /**
+     * Modifies the "accessible" flag of given {@code accessibleObject} according to permissions
+     * of the {@code callerClass} governed by @{@link Friend} annotations attached to the
+     * field/method/constructor.
+     *
+     * @param accessibleObject field, method or constructor
+     * @param callerClass      the class directly calling into public {@link Friendly} methods
+     * @param <A>              the type of accessible object
+     * @return the same {@code accessibleObject} but with "accessible" flag possibly modified
+     */
     private static <A extends AccessibleObject> A friendly(A accessibleObject, Class<?> callerClass) {
         Friend friendAnn = accessibleObject.getAnnotation(Friend.class);
         if (friendAnn != null) {
@@ -78,7 +105,7 @@ public class Friendly {
         if (accessibleObject instanceof Method) {
             Method m = (Method) accessibleObject;
             return (
-                callerClass == FriendlyProxy.class &&
+                callerClass == FriendlyProxyFactory.class &&
                 m.getDeclaringClass() == Proxy.class &&
                 m.getName().equals("defineClass0")
             );
