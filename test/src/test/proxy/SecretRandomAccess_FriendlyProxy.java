@@ -1,5 +1,6 @@
 package test.proxy;
 
+import si.pele.friendly.Friendly;
 import si.pele.friendly.FriendlyProxyFactory;
 import si.pele.friendly.MHThrows;
 
@@ -7,8 +8,8 @@ import java.lang.invoke.MethodHandle;
 
 /**
  */
-public class SecretRandomAccess_FriendlyProxy implements SecretRandomAccess {
-
+public final class SecretRandomAccess_FriendlyProxy implements SecretRandomAccess {
+    private static final MethodHandle mh0 = Friendly.method(SecretRandom.class, "nextInt");
     private final MethodHandle mh1;
 
     public SecretRandomAccess_FriendlyProxy(MethodHandle mh1) {
@@ -16,9 +17,9 @@ public class SecretRandomAccess_FriendlyProxy implements SecretRandomAccess {
     }
 
     @Override
-    public final int nextInt(SecretRandom tc) {
+    public int nextInt(SecretRandom tc) {
         try {
-            return (int) mh1.invokeExact(tc);
+            return (int) mh0.invokeExact(tc);
         }
         catch (Throwable t) {
             throw MHThrows.unchecked(t);

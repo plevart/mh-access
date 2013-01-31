@@ -3,6 +3,8 @@ package test;
 import si.pele.friendly.Friend;
 import si.pele.friendly.Friendly;
 import si.pele.microbench.TestRunner;
+import test.proxy.SecretRandom;
+import test.proxy.SecretRandomAccess;
 
 import java.lang.invoke.MethodHandle;
 import java.util.concurrent.ThreadLocalRandom;
@@ -117,8 +119,36 @@ public class MHPerfTest extends TestRunner {
         }
     }
 
+    public static class proxy_call extends Test {
+        private static final SecretRandomAccess sra = SecretRandom.ACCESS;
+        private final SecretRandom sr = new SecretRandom();
+
+        @Override
+        protected void doOp() {
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+        }
+    }
+
+    public static class mh_proxy_call extends Test {
+        private static final SecretRandomAccess sra = Friendly.proxy(SecretRandomAccess.class);
+        private final SecretRandom sr = new SecretRandom();
+
+        @Override
+        protected void doOp() {
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+            consume(sra.nextInt(sr));
+        }
+    }
+
     public static void main(String[] args) throws Throwable {
-        doTest(mh_field_access.class, 5000L, 1, 8, 1);
-        doTest(field_access.class, 5000L, 1, 8, 1);
+        doTest(mh_proxy_call.class, 5000L, 1, 8, 1);
+        doTest(proxy_call.class, 5000L, 1, 8, 1);
     }
 }

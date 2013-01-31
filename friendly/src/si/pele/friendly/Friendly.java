@@ -89,10 +89,8 @@ public class Friendly {
      */
     private static <A extends AccessibleObject> A friendly(A accessibleObject, Class<?> callerClass) {
         Friend friendAnn = accessibleObject.getAnnotation(Friend.class);
-        if (friendAnn != null) {
-            if (contains(friendAnn.value(), callerClass) || privileged(accessibleObject, callerClass)) {
-                accessibleObject.setAccessible(true);
-            }
+        if (friendAnn != null && contains(friendAnn.value(), callerClass) || privileged(accessibleObject, callerClass)) {
+            accessibleObject.setAccessible(true);
         }
         return accessibleObject;
     }

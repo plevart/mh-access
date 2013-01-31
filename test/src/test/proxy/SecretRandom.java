@@ -1,6 +1,7 @@
 package test.proxy;
 
 import si.pele.friendly.Friend;
+import test.MHPerfTest;
 
 import static si.pele.friendly.MHThrows.unchecked;
 
@@ -13,7 +14,7 @@ public class SecretRandom {
 
     private long seed;
 
-    @Friend(MyFriend.class)
+    @Friend({MHPerfTest.mh_proxy_call.class, SecretRandomAccess_FriendlyProxy.class})
     private int nextInt() {
         try {
             long nextseed = (seed * multiplier + addend) & mask;
