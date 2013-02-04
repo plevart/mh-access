@@ -14,7 +14,7 @@ public class SecretRandom {
 
     private long seed;
 
-    @Friend({MHPerfTest.mh_proxy_call.class, SecretRandomAccess_FriendlyProxy.class})
+    @Friend({MHPerfTest.mh_proxy_call.class})
     private int nextInt() {
         try {
             long nextseed = (seed * multiplier + addend) & mask;

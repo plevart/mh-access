@@ -3,21 +3,18 @@ package si.pele.friendly;
 import sun.reflect.ReflectionFactory;
 
 import java.lang.invoke.MethodHandle;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
-public final class FriendlyProxyFactory<I> {
+final class FriendlyProxyFactory<I> {
 
     @SuppressWarnings("unchecked")
-    public static <I> FriendlyProxyFactory<? extends I> getFactory(Class<I> intf) throws IllegalArgumentException {
+    static <I> FriendlyProxyFactory<? extends I> getFactory(Class<I> intf) throws IllegalArgumentException {
         return (FriendlyProxyFactory<? extends I>) factoryCache.get(Objects.requireNonNull(intf));
     }
 
@@ -28,13 +25,15 @@ public final class FriendlyProxyFactory<I> {
         }
     };
 
+    static final String PROXY_CLASS_FIELD_NAME = "INSTANCE";
+
     private static final String proxyClassNamePrefix = "$FriendlyProxy";
     private static final AtomicLong nextUniqueNumber = new AtomicLong();
     private static final ReflectionFactory reflectionFactory =
         java.security.AccessController.doPrivileged
             (new sun.reflect.ReflectionFactory.GetReflectionFactoryAction());
 
-    private final Constructor<? extends I> proxyConstructor;
+    private final Class<? extends I> proxyClass;
     private final Method[] targetMethods;
 
     FriendlyProxyFactory(Class<I> intf) throws IllegalArgumentException {
@@ -86,7 +85,7 @@ public final class FriendlyProxyFactory<I> {
             if (method.getReturnType() != targetMethod.getReturnType()) {
                 throw new IllegalArgumentException(
                     "Return types of target method: " + targetMethod +
-                    " and proxy method: " + method + " don't match"
+                        " and proxy method: " + method + " don't match"
                 );
             }
             Class<?>[] exceptionTypes = method.getExceptionTypes();
@@ -101,14 +100,13 @@ public final class FriendlyProxyFactory<I> {
                 }
                 throw new IllegalArgumentException(
                     "Target method: " + targetMethod + " declares checked exceptions" +
-                    " that are not declared by proxy method: " + method
+                        " that are not declared by proxy method: " + method
                 );
             }
             // Ok, validated
             targetMethods[i] = targetMethod;
         }
 
-        Class<? extends I> proxyClass;
         try {
             //noinspection unchecked
             proxyClass = (Class<? extends I>) Class.forName(intf.getName() + "_FriendlyProxy", false, intf.getClassLoader());
@@ -116,32 +114,14 @@ public final class FriendlyProxyFactory<I> {
         catch (ClassNotFoundException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
-
-        Class<?>[] paramTypes = new Class<?>[targetMethods.length];
-        Arrays.fill(paramTypes, MethodHandle.class);
-        try {
-            this.proxyConstructor = proxyClass.getDeclaredConstructor(paramTypes);
-        }
-        catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
     }
 
-    public I createProxy(MethodHandle[] methodHandles) throws IllegalArgumentException {
-        try {
-            return proxyConstructor.newInstance(methodHandles);
-        }
-        catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
+    Class<? extends I> getProxyClass() {
+        return proxyClass;
     }
 
-    public Method[] getTargetMethods() {
-        // must copy methods every time because we manipulate the "accessible" flag...
-        Method[] methods = new Method[targetMethods.length];
-        for (int i = 0; i < targetMethods.length; i++)
-            methods[i] = reflectionFactory.copyMethod(targetMethods[i]);
-        return methods;
+    Method[] getTargetMethods() {
+        return targetMethods;
     }
 
     // access to private native method in j.l.r.Proxy
@@ -150,8 +130,10 @@ public final class FriendlyProxyFactory<I> {
         Proxy.class, "defineClass0", ClassLoader.class, String.class, byte[].class, int.class, int.class
     );
 
-    private static Class<?> defineClass0(ClassLoader loader, String name,
-                                         byte[] b, int off, int len) {
+    private static Class<?> defineClass0(
+        ClassLoader loader, String name,
+        byte[] b, int off, int len
+    ) {
         try {
             return (Class<?>) defineClass0MH.invokeExact(loader, name, b, off, len);
         }
