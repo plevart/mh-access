@@ -4,7 +4,9 @@ import sun.reflect.Reflection;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Objects;
@@ -14,13 +16,24 @@ import java.util.Objects;
  * to allow access to method handles for otherwise prohibited constructors, methods or fields.
  */
 public class Friendly {
-    private static final MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+    private static final MethodHandles.Lookup lookup;
+
+    static {
+        try {
+            Field lookupField = MethodHandles.class.getDeclaredField("IMPL_LOOKUP");
+            lookupField.setAccessible(true);
+            lookup = (MethodHandles.Lookup) lookupField.get(null);
+        }
+        catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new Error(e);
+        }
+    }
 
     public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes) throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                         .unreflect(accessible(rcv.getDeclaredMethod(methodName, parameterTypes), cc));
+                .unreflect(accessible(rcv.getDeclaredMethod(methodName, parameterTypes), cc));
         }
         catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
@@ -34,7 +47,7 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                         .unreflectConstructor(accessible(rcv.getDeclaredConstructor(parameterTypes), cc));
+                .unreflectConstructor(accessible(rcv.getDeclaredConstructor(parameterTypes), cc));
         }
         catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
@@ -48,7 +61,7 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                         .unreflectGetter(accessible(rcv.getDeclaredField(fieldName), cc));
+                .unreflectGetter(accessible(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
@@ -62,7 +75,7 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                         .unreflectSetter(accessible(rcv.getDeclaredField(fieldName), cc));
+                .unreflectSetter(accessible(rcv.getDeclaredField(fieldName), cc));
         }
         catch (NoSuchFieldException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
@@ -72,6 +85,33 @@ public class Friendly {
         }
     }
 
+    // public MethodHandle lookup methods that can only be accessed from friendly proxies' static initializer(s)
+
+    static final String FIND_VIRTUAL_METHOD_NAME = "findVirtual";
+    static final MethodType FIND_VIRTUAL_METHOD_TYPE = MethodType.methodType(MethodHandle.class, String.class, String.class, String.class);
+
+    public static MethodHandle findVirtual(String refcName, String name, String methodTypeDescriptor) {
+        Class<?> cc = Reflection.getCallerClass(2);
+        checkProxyClassBeingInitialized(cc);
+        ClassLoader cl = cc.getClassLoader();
+        try {
+            Class<?> refc = Class.forName(refcName, false, cl);
+            MethodType methodType = MethodType.fromMethodDescriptorString(methodTypeDescriptor, cl);
+            return lookup.findVirtual(refc, name, methodType);
+        }
+        catch (NoSuchMethodException | ClassNotFoundException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+        catch (IllegalAccessException e) {
+            throw new FriendlyAccessException(e);
+        }
+    }
+
+    private static void checkProxyClassBeingInitialized(Class<?> cc) {
+        if (cc != PROXY_CLASS_BEING_INITIALIZED.get())
+            throw new FriendlyAccessException("Not called from friendly proxy class initializer");
+    }
+
     private static final ClassValue<FriendlyProxyFactory<?>> PROXY_FACTORY_CV = new ClassValue<FriendlyProxyFactory<?>>() {
         @Override
         protected FriendlyProxyFactory<?> computeValue(Class<?> intf) {
@@ -79,12 +119,12 @@ public class Friendly {
         }
     };
 
-    private static final ClassValue<?> PROXY_CV = new ProxyClassValue();
+    private static final ClassValue<?> PROXY_INSTANCE_CV = new ProxyInstanceClassValue();
 
-    private static class ProxyClassValue extends ClassValue<Object> {
+    private static class ProxyInstanceClassValue extends ClassValue<Object> {
         @Override
         protected Object computeValue(Class<?> proxyClass) {
-            MethodHandle mh = getter(proxyClass, FriendlyProxyFactory.PROXY_CLASS_FIELD_NAME);
+            MethodHandle mh = getter(proxyClass, FriendlyProxyFactory.PROXY_INSTANCE_FIELD_NAME);
             try {
                 return proxyClass.cast(mh.invoke());
             }
@@ -116,7 +156,7 @@ public class Friendly {
         // obtain sole proxy instance
         // this will force class initialization if not yet initialized
         try {
-            I proxy = (I) PROXY_CV.get(proxyClass);
+            I proxy = (I) PROXY_INSTANCE_CV.get(proxyClass);
             return proxy;
         }
         finally {
@@ -151,12 +191,8 @@ public class Friendly {
         if (friendAnn != null && contains(friendAnn.value(), callerClass))
             return true;
 
-        // check if callerClass is proxy class just being initialized
-        if (PROXY_CLASS_BEING_INITIALIZED.get() == callerClass)
-            return true;
-
         // special case callers
-        if (Friendly.class == callerClass || ProxyClassValue.class == callerClass)
+        if (Friendly.class == callerClass || ProxyInstanceClassValue.class == callerClass)
             return true;
 
         // special case for Proxy.defineClass0 method called from FriendlyProxyFactory
@@ -164,8 +200,8 @@ public class Friendly {
             Method m = (Method) accessibleObject;
             return (
                 callerClass == FriendlyProxyFactory.class &&
-                    m.getDeclaringClass() == Proxy.class &&
-                    m.getName().equals("defineClass0")
+                m.getDeclaringClass() == Proxy.class &&
+                m.getName().equals("defineClass0")
             );
         }
 
