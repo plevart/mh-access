@@ -173,11 +173,11 @@ final class FriendlyProxyFactory<I> {
         jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <init> ()");
     private static final jdk.internal.org.objectweb.asm.commons.Method staticInitializer =
         jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <clinit> ()");
-    private static final jdk.internal.org.objectweb.asm.commons.Method Friendly_invokeVirtual_Method;
+    private static final jdk.internal.org.objectweb.asm.commons.Method Friendly_findVirtual;
 
     static {
         try {
-            Friendly_invokeVirtual_Method =
+            Friendly_findVirtual =
                 jdk.internal.org.objectweb.asm.commons.Method.getMethod(
                     Friendly.class.getDeclaredMethod("findVirtual", Class.class, String.class, String.class)
                 );
@@ -265,7 +265,7 @@ final class FriendlyProxyFactory<I> {
                         ).toMethodDescriptorString()
                     );
                     // invoke the Friendly.findVirtual static method
-                    clinit.invokeStatic(Friendly_Type, Friendly_invokeVirtual_Method);
+                    clinit.invokeStatic(Friendly_Type, Friendly_findVirtual);
                     // store the result into mh0, mh1, ... field
                     clinit.putStatic(proxyClass_Type, mhFieldNamePrefix + i, MethodHandle_Type);
                 }
