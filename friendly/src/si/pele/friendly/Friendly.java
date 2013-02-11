@@ -11,9 +11,12 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Objects;
 
 /**
@@ -27,14 +30,19 @@ public class Friendly {
     private static final MethodHandles.Lookup lookup;
 
     static {
-        try {
-            Field lookupField = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
-            lookupField.setAccessible(true);
-            lookup = (MethodHandles.Lookup) lookupField.get(null);
-        }
-        catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new Error(e);
-        }
+        lookup = AccessController.doPrivileged(new PrivilegedAction<MethodHandles.Lookup>() {
+            @Override
+            public MethodHandles.Lookup run() {
+                try {
+                    Field lookupField = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
+                    lookupField.setAccessible(true);
+                    return (MethodHandles.Lookup) lookupField.get(null);
+                }
+                catch (IllegalAccessException | NoSuchFieldException e) {
+                    throw new Error(e);
+                }
+            }
+        });
     }
 
     public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes)
@@ -42,10 +50,14 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                .unreflect(accessible(rcv.getDeclaredMethod(methodName, parameterTypes), cc));
-        }
-        catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+                .unreflect(
+                    accessible(
+                        AccessController.doPrivileged(
+                            new GetDeclaredMethodAction(rcv, methodName, parameterTypes)
+                        ),
+                        cc
+                    )
+                );
         }
         catch (IllegalAccessException e) {
             throw new FriendlyAccessException(e);
@@ -57,10 +69,14 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                .unreflectConstructor(accessible(rcv.getDeclaredConstructor(parameterTypes), cc));
-        }
-        catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+                .unreflectConstructor(
+                    accessible(
+                        AccessController.doPrivileged(
+                            new GetDeclaredConstructorAction(rcv, parameterTypes)
+                        ),
+                        cc
+                    )
+                );
         }
         catch (IllegalAccessException e) {
             throw new FriendlyAccessException(e);
@@ -72,10 +88,14 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                .unreflectGetter(accessible(rcv.getDeclaredField(fieldName), cc));
-        }
-        catch (NoSuchFieldException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+                .unreflectGetter(
+                    accessible(
+                        AccessController.doPrivileged(
+                            new GetDeclaredFieldAction(rcv, fieldName)
+                        ),
+                        cc
+                    )
+                );
         }
         catch (IllegalAccessException e) {
             throw new FriendlyAccessException(e);
@@ -87,10 +107,14 @@ public class Friendly {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
-                .unreflectSetter(accessible(rcv.getDeclaredField(fieldName), cc));
-        }
-        catch (NoSuchFieldException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+                .unreflectSetter(
+                    accessible(
+                        AccessController.doPrivileged(
+                            new GetDeclaredFieldAction(rcv, fieldName)
+                        ),
+                        cc
+                    )
+                );
         }
         catch (IllegalAccessException e) {
             throw new FriendlyAccessException(e);
@@ -183,9 +207,15 @@ public class Friendly {
      * @param <A>              the type of accessible object
      * @return the same {@code accessibleObject} but with "accessible" flag possibly modified
      */
-    private static <A extends AccessibleObject> A accessible(A accessibleObject, Class<?> callerClass) {
+    private static <A extends AccessibleObject> A accessible(final A accessibleObject, final Class<?> callerClass) {
         if (checkAccess(accessibleObject, callerClass)) {
-            accessibleObject.setAccessible(true);
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                @Override
+                public Void run() {
+                    accessibleObject.setAccessible(true);
+                    return null;
+                }
+            });
         }
         return accessibleObject;
     }
@@ -222,5 +252,73 @@ public class Friendly {
             if (Objects.equals(e, element))
                 return true;
         return false;
+    }
+
+    static class GetDeclaredMethodAction implements PrivilegedAction<Method> {
+        private final Class<?> clazz;
+        private final String methodName;
+        private final Class<?>[] parameterTypes;
+        private final String noSuchMethodMessage;
+
+        GetDeclaredMethodAction(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+            this(clazz, methodName, parameterTypes, null);
+        }
+
+        GetDeclaredMethodAction(Class<?> clazz, String methodName, Class<?>[] parameterTypes, String noSuchMethodMessage) {
+            this.clazz = clazz;
+            this.methodName = methodName;
+            this.parameterTypes = parameterTypes;
+            this.noSuchMethodMessage = noSuchMethodMessage;
+        }
+
+        @Override
+        public Method run() {
+            try {
+                return clazz.getDeclaredMethod(methodName, parameterTypes);
+            }
+            catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException(noSuchMethodMessage == null ? e.getMessage() : noSuchMethodMessage, e);
+            }
+        }
+    }
+
+    static class GetDeclaredConstructorAction implements PrivilegedAction<Constructor<?>> {
+        private final Class<?> clazz;
+        private final Class<?>[] parameterTypes;
+
+        GetDeclaredConstructorAction(Class<?> clazz, Class<?>... parameterTypes) {
+            this.clazz = clazz;
+            this.parameterTypes = parameterTypes;
+        }
+
+        @Override
+        public Constructor<?> run() {
+            try {
+                return clazz.getDeclaredConstructor(parameterTypes);
+            }
+            catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+        }
+    }
+
+    static class GetDeclaredFieldAction implements PrivilegedAction<Field> {
+        private final Class<?> clazz;
+        private final String fieldName;
+
+        GetDeclaredFieldAction(Class<?> clazz, String fieldName) {
+            this.clazz = clazz;
+            this.fieldName = fieldName;
+        }
+
+        @Override
+        public Field run() {
+            try {
+                return clazz.getDeclaredField(fieldName);
+            }
+            catch (NoSuchFieldException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+        }
     }
 }

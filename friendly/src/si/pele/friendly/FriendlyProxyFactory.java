@@ -20,6 +20,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
+import java.security.AccessController;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -69,24 +70,23 @@ final class FriendlyProxyFactory<I> {
         targetMethods = new Method[methods.length];
         for (int i = 0; i < methods.length; i++) {
             Method method = methods[i];
-            String name = method.getName();
+            final String name = method.getName();
             Class<?>[] paramTypes = method.getParameterTypes();
             if (paramTypes.length == 0)
                 throw new IllegalArgumentException(
                     "Invalid proxy method: " + method + " (missing target parameter)"
                 );
             Class<?> targetClass = paramTypes[0];
-            Class<?>[] targetParamTypes = new Class<?>[paramTypes.length - 1];
+            final Class<?>[] targetParamTypes = new Class<?>[paramTypes.length - 1];
             System.arraycopy(paramTypes, 1, targetParamTypes, 0, targetParamTypes.length);
-            Method targetMethod;
-            try {
-                targetMethod = targetClass.getDeclaredMethod(name, targetParamTypes);
-            }
-            catch (NoSuchMethodException e) {
-                throw new IllegalArgumentException(
+            Method targetMethod = AccessController.doPrivileged(
+                new Friendly.GetDeclaredMethodAction(
+                    targetClass,
+                    name,
+                    targetParamTypes,
                     "Can't find target method for proxy method: " + method
-                );
-            }
+                )
+            );
             if (method.getReturnType() != targetMethod.getReturnType()) {
                 throw new IllegalArgumentException(
                     "Return types of target method: " + targetMethod +

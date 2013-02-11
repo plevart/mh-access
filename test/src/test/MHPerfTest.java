@@ -11,6 +11,7 @@ import si.pele.microbench.TestRunner;
 import test.proxy.SecretRandom;
 
 import java.lang.invoke.MethodHandle;
+import java.rmi.RMISecurityManager;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static si.pele.friendly.MHThrows.unchecked;
@@ -154,6 +155,8 @@ public class MHPerfTest extends TestRunner {
     }
 
     public static void main(String[] args) throws Throwable {
+        System.setSecurityManager(new RMISecurityManager());
+
         doTest(mh_proxy_call.class, 5000L, 1, 8, 1);
         doTest(proxy_call.class, 5000L, 1, 8, 1);
     }
