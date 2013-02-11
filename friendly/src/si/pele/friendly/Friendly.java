@@ -34,7 +34,8 @@ public class Friendly {
         }
     }
 
-    public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes) throws IllegalArgumentException, FriendlyAccessException {
+    public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes)
+        throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
@@ -48,7 +49,8 @@ public class Friendly {
         }
     }
 
-    public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes) throws IllegalArgumentException, FriendlyAccessException {
+    public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes)
+        throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
@@ -62,7 +64,8 @@ public class Friendly {
         }
     }
 
-    public static MethodHandle getter(Class<?> rcv, String fieldName) throws IllegalArgumentException, FriendlyAccessException {
+    public static MethodHandle getter(Class<?> rcv, String fieldName)
+        throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
@@ -76,7 +79,8 @@ public class Friendly {
         }
     }
 
-    public static MethodHandle setter(Class<?> rcv, String fieldName) throws IllegalArgumentException, FriendlyAccessException {
+    public static MethodHandle setter(Class<?> rcv, String fieldName)
+        throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
             return lookup.in(cc)
@@ -92,7 +96,8 @@ public class Friendly {
 
     // public MethodHandle lookup methods that can only be accessed from friendly proxies' static initializer(s)
 
-    public static MethodHandle findVirtual(Class<?> refc, String name, String methodTypeDescriptor) {
+    public static MethodHandle findVirtual(Class<?> refc, String name, String methodTypeDescriptor)
+        throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         checkProxyClassBeingInitialized(cc);
         ClassLoader cl = cc.getClassLoader();
@@ -108,7 +113,7 @@ public class Friendly {
         }
     }
 
-    private static void checkProxyClassBeingInitialized(Class<?> cc) {
+    private static void checkProxyClassBeingInitialized(Class<?> cc) throws FriendlyAccessException {
         if (cc != PROXY_CLASS_BEING_INITIALIZED.get())
             throw new FriendlyAccessException("Not called from friendly proxy class initializer");
     }
