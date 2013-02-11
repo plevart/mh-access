@@ -5,35 +5,22 @@ import jdk.internal.org.objectweb.asm.FieldVisitor;
 import jdk.internal.org.objectweb.asm.MethodVisitor;
 import jdk.internal.org.objectweb.asm.Opcodes;
 import jdk.internal.org.objectweb.asm.Type;
-import sun.reflect.ReflectionFactory;
+import jdk.internal.org.objectweb.asm.commons.GeneratorAdapter;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 final class FriendlyProxyFactory<I> {
 
-    @SuppressWarnings("unchecked")
-    static <I> FriendlyProxyFactory<? extends I> getFactory(Class<I> intf) throws IllegalArgumentException {
-        return (FriendlyProxyFactory<? extends I>) factoryCache.get(Objects.requireNonNull(intf));
-    }
-
-    private static final ClassValue<FriendlyProxyFactory<?>> factoryCache = new ClassValue<FriendlyProxyFactory<?>>() {
-        @Override
-        protected FriendlyProxyFactory<?> computeValue(Class<?> intf) {
-            return new FriendlyProxyFactory<>(intf);
-        }
-    };
-
-    private static final ReflectionFactory reflectionFactory =
-        java.security.AccessController.doPrivileged
-            (new sun.reflect.ReflectionFactory.GetReflectionFactoryAction());
+//    private static final ReflectionFactory reflectionFactory =
+//        java.security.AccessController.doPrivileged
+//            (new sun.reflect.ReflectionFactory.GetReflectionFactoryAction());
 
     private final Class<? extends I> proxyClass;
     private final Method[] targetMethods;
@@ -45,14 +32,14 @@ final class FriendlyProxyFactory<I> {
 
         // take just abstract instance methods (ignore default/static JDK8 methods)
         Method[] methods = intf.getMethods();
-        int pubAbstrInstCount = 0;
+        int abstrInstCount = 0;
         for (Method method : methods) {
             int mod = method.getModifiers();
             if (Modifier.isAbstract(mod) && !Modifier.isStatic(mod))
-                pubAbstrInstCount++;
+                abstrInstCount++;
         }
-        if (pubAbstrInstCount != methods.length) {
-            Method[] filteredMethods = new Method[pubAbstrInstCount];
+        if (abstrInstCount != methods.length) {
+            Method[] filteredMethods = new Method[abstrInstCount];
             int i = 0;
             for (Method method : methods) {
                 int mod = method.getModifiers();
@@ -62,7 +49,7 @@ final class FriendlyProxyFactory<I> {
             methods = filteredMethods;
         }
 
-        // collect method's exception types into an array of arrays
+        // collect methods' exception types into an array of arrays
         @SuppressWarnings("unchecked")
         Class<?>[][] methodsExceptionTypes = new Class[methods.length][];
 
@@ -96,14 +83,18 @@ final class FriendlyProxyFactory<I> {
             }
             Class<?>[] exceptionTypes = method.getExceptionTypes();
             methodsExceptionTypes[i] = exceptionTypes;
-            nextTargetExceptionType:
+            // validate assign-ability of declared checked exception types
+            next_target_exc_type:
             for (Class<?> targetExceptionType : targetMethod.getExceptionTypes()) {
+                // skip unchecked exception types
                 if (RuntimeException.class.isAssignableFrom(targetExceptionType) ||
                     Error.class.isAssignableFrom(targetExceptionType))
-                    continue nextTargetExceptionType;
+                    continue next_target_exc_type;
+                // checked target method exception type should be assign-able to at least one
+                // of proxy method's exception types...
                 for (Class<?> exceptionType : exceptionTypes) {
                     if (exceptionType.isAssignableFrom(targetExceptionType))
-                        continue nextTargetExceptionType;
+                        continue next_target_exc_type;
                 }
                 throw new IllegalArgumentException(
                     "Target method: " + targetMethod + " declares checked exceptions" +
@@ -155,7 +146,7 @@ final class FriendlyProxyFactory<I> {
 
         // generate proxy class
         {
-            cw.visit(classFileVersion, Opcodes.ACC_SUPER, proxyClassName, null, "java/lang/Object", new String[]{intfName});
+            cw.visit(classFileVersion, Opcodes.ACC_SUPER | Opcodes.ACC_FINAL, proxyClassName, null, "java/lang/Object", new String[]{intfName});
 
             // generate private static final fields with names: mh0, mh1, ... and type java.lang.invoke.MethodHandle
             for (int i = 0; i < targetMethods.length; i++) {
@@ -186,7 +177,7 @@ final class FriendlyProxyFactory<I> {
                 MethodVisitor clinit = cw.visitMethod(
                     Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
                     "<clinit>",
-                    MethodType.methodType(void.class).toMethodDescriptorString(),
+                    "()V",
                     null,
                     null
                 );
@@ -194,8 +185,8 @@ final class FriendlyProxyFactory<I> {
                 // initialize static mh0, mh1, ... fields
                 for (int i = 0; i < targetMethods.length; i++) {
                     Method targetMethod = targetMethods[i];
-                    // load target method's declaring class FQ name
-                    clinit.visitLdcInsn(targetMethod.getDeclaringClass().getName());
+                    // load target method's declaring class
+                    clinit.visitLdcInsn(Type.getType(targetMethod.getDeclaringClass()));
                     // load method name
                     clinit.visitLdcInsn(targetMethod.getName());
                     // load method type descriptor
@@ -223,10 +214,56 @@ final class FriendlyProxyFactory<I> {
 
                 // initialize static INSTANCE field
                 {
-
+                    // create new proxy instance
+                    clinit.visitTypeInsn(Opcodes.NEW, "L" + proxyClassName + ";");
+                    // duplicate reference to newly created instance
+                    clinit.visitInsn(Opcodes.DUP);
+                    // invoke no-arg constructor
+                    clinit.visitMethodInsn(Opcodes.INVOKESPECIAL, proxyClassName, "<init>", "()V");
+                    // assign the instance to "INSTANCE" static field
+                    clinit.visitFieldInsn(
+                        Opcodes.PUTSTATIC,
+                        proxyClassName,
+                        PROXY_INSTANCE_FIELD_NAME,
+                        "L" + proxyClassName + ";"
+                    );
                 }
 
+                // return
+                clinit.visitInsn(Opcodes.RETURN);
+
+                // end of static initializer
                 clinit.visitEnd();
+            }
+
+            // generate private no-arg constructor
+            {
+                MethodVisitor init = cw.visitMethod(
+                    Opcodes.ACC_PRIVATE,
+                    "<init>",
+                    "()V",
+                    null,
+                    null
+                );
+
+                // invoke super (j.l.Object) constructor
+                init.visitVarInsn(Opcodes.ALOAD, 0);
+                init.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
+
+                // return
+                init.visitInsn(Opcodes.RETURN);
+
+                // end of constructor
+                init.visitEnd();
+            }
+
+            // generate proxy methods
+            for (int i = 0; i < methods.length; i++) {
+                Method method = methods[i];
+                jdk.internal.org.objectweb.asm.commons.Method m =
+                    jdk.internal.org.objectweb.asm.commons.Method.getMethod(method);
+                GeneratorAdapter gen = new GeneratorAdapter(Opcodes.ACC_PUBLIC, m, null, getExceptionTypes(method), cw);
+                // TODO...
             }
 
             cw.visitEnd();
@@ -234,6 +271,15 @@ final class FriendlyProxyFactory<I> {
 
         // TODO
         return null;
+    }
+
+    private Type[] getExceptionTypes(Method method) {
+        Class<?>[] exceptionClasses = method.getExceptionTypes();
+        Type[] exceptionTypes = new Type[exceptionClasses.length];
+        for (int i = 0; i < exceptionClasses.length; i++) {
+            exceptionTypes[i] = Type.getType(exceptionClasses[i]);
+        }
+        return exceptionTypes;
     }
 
     // access to private native method in j.l.r.Proxy
