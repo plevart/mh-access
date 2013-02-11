@@ -1,3 +1,8 @@
+/*
+ * Written by Peter Levart <peter.levart@gmail.com>
+ * and released to the public domain, as explained at
+ * http://creativecommons.org/publicdomain/zero/1.0/
+ */
 package si.pele.friendly;
 
 import sun.reflect.Reflection;
@@ -134,7 +139,6 @@ public class Friendly {
 
     public static <I> I proxy(Class<I> intf) throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
-        MethodHandles.Lookup ccLookup = lookup.in(cc);
         @SuppressWarnings("unchecked")
         FriendlyProxyFactory<? extends I> proxyFactory = (FriendlyProxyFactory<? extends I>) PROXY_FACTORY_CV.get(intf);
 

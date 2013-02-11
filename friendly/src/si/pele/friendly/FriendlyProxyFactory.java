@@ -1,3 +1,8 @@
+/*
+ * Written by Peter Levart <peter.levart@gmail.com>
+ * and released to the public domain, as explained at
+ * http://creativecommons.org/publicdomain/zero/1.0/
+ */
 package si.pele.friendly;
 
 import jdk.internal.org.objectweb.asm.ClassWriter;
@@ -18,6 +23,14 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * A factory for friendly proxy classes. Each proxy class is generated to implement the given interface and
+ * is defined by the interface's class loader. This happens in the constructor of the proxy factory.
+ * After constructor is successfully finished, factory object serves as a holder for the
+ * {@code Class} object (accessed by {@link #getProxyClass()}) representing generated proxy class and an array
+ * of target methods (accessed by {@link #getTargetMethods()}) that the proxy forwards requests to.
+ * Both are retrieved by {@link Friendly#proxy(Class)} method which also obtains the
+ * singleton proxy instance by reading the private static final field of the proxy class and governs
+ * access to this instance by it's internal policy taking into account all target methods.
  */
 final class FriendlyProxyFactory<I> {
 
