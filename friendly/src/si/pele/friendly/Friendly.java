@@ -18,7 +18,10 @@ import java.util.Objects;
 
 /**
  * A {@link MethodHandles.Lookup} facade that uses @{@link Friend} annotation
- * to allow access to method handles for otherwise prohibited constructors, methods or fields.
+ * to govern access to method handles for otherwise prohibited constructors ({@link #constructor}),
+ * methods ({@link #method}) or fields ({@link #getter}, {@link #setter}).<p>
+ * It also provides a factory for proxies that invoke otherwise prohibited target methods
+ * ({@link #proxy})...
  */
 public class Friendly {
     private static final MethodHandles.Lookup lookup;
