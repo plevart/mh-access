@@ -4,12 +4,9 @@ import si.pele.friendly.Friend;
 import si.pele.friendly.Friendly;
 import si.pele.microbench.TestRunner;
 import test.proxy.SecretRandom;
-import test.proxy.SecretRandomAccess;
 
 import java.lang.invoke.MethodHandle;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.IntFunction;
-import java.util.function.IntSupplier;
 
 import static si.pele.friendly.MHThrows.unchecked;
 
@@ -120,7 +117,7 @@ public class MHPerfTest extends TestRunner {
     }
 
     public static class proxy_call extends Test {
-        private static final SecretRandomAccess sra = SecretRandom.ACCESS;
+        private static final SecretRandom.Access sra = SecretRandom.ACCESS;
         private final SecretRandom sr = new SecretRandom();
 
         @Override
@@ -134,7 +131,11 @@ public class MHPerfTest extends TestRunner {
     }
 
     public static class mh_proxy_call extends Test {
-        private static final SecretRandomAccess sra = Friendly.proxy(SecretRandomAccess.class);
+        interface SRA {
+            int nextInt(SecretRandom tc);
+        }
+
+        private static final SRA sra = Friendly.proxy(SRA.class);
         private final SecretRandom sr = new SecretRandom();
 
         @Override

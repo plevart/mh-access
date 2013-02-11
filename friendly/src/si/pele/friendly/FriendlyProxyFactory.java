@@ -2,11 +2,14 @@ package si.pele.friendly;
 
 import jdk.internal.org.objectweb.asm.ClassWriter;
 import jdk.internal.org.objectweb.asm.FieldVisitor;
-import jdk.internal.org.objectweb.asm.MethodVisitor;
 import jdk.internal.org.objectweb.asm.Opcodes;
 import jdk.internal.org.objectweb.asm.Type;
 import jdk.internal.org.objectweb.asm.commons.GeneratorAdapter;
+import sun.security.action.GetPropertyAction;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
@@ -17,10 +20,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  */
 final class FriendlyProxyFactory<I> {
-
-//    private static final ReflectionFactory reflectionFactory =
-//        java.security.AccessController.doPrivileged
-//            (new sun.reflect.ReflectionFactory.GetReflectionFactoryAction());
 
     private final Class<? extends I> proxyClass;
     private final Method[] targetMethods;
@@ -105,14 +104,33 @@ final class FriendlyProxyFactory<I> {
             targetMethods[i] = targetMethod;
         }
 
-        proxyClass = spinProxyClass(intf, methods, methodsExceptionTypes);
-//        try {
-//            //noinspection unchecked
-//            proxyClass = (Class<? extends I>) Class.forName(intf.getName() + "_FriendlyProxy", false, intf.getClassLoader());
-//        }
-//        catch (ClassNotFoundException e) {
-//            throw new IllegalArgumentException(e.getMessage(), e);
-//        }
+        ClassFile classFile = spinProxyClass(intf, methods, methodsExceptionTypes, targetMethods);
+
+        if (saveGeneratedFilesDir != null) {
+            File dir = new File(saveGeneratedFilesDir);
+            File file = new File(dir, classFile.className + ".class");
+            try {
+                File parentDir = file.getParentFile();
+                if (!parentDir.isDirectory()) parentDir.mkdirs();
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(classFile.classBytes);
+                }
+            }
+            catch (IOException e) {
+                throw new Error("I/O exception saving generated file: " + file, e);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        Class<? extends I> proxyClass = (Class<? extends I>) defineClass0(
+            intf.getClassLoader(),
+            classFile.className.replace('/', '.'),
+            classFile.classBytes,
+            0,
+            classFile.classBytes.length
+        );
+
+        this.proxyClass = proxyClass;
     }
 
     Class<? extends I> getProxyClass() {
@@ -127,20 +145,58 @@ final class FriendlyProxyFactory<I> {
 
     static final String PROXY_INSTANCE_FIELD_NAME = "INSTANCE";
 
+    private static final String saveGeneratedFilesDir =
+        java.security.AccessController.doPrivileged(
+            new GetPropertyAction("si.pele.friendly.FriendlyProxyFactory.saveGeneratedFilesDir")
+        );
+
     private static final String proxyClassNamePrefix = "$FriendlyProxy";
     private static final String mhFieldNamePrefix = "mh";
-    private static final String MethodHandle_typeDescriptor = Type.getDescriptor(MethodHandle.class);
     private static final AtomicLong nextUniqueNumber = new AtomicLong();
     private static final int classFileVersion = 51;
-    private static final String Friendly_className = Friendly.class.getName().replace('.', '/');
+    private static final Type MethodHandle_Type = Type.getType(MethodHandle.class);
+    private static final Type Friendly_Type = Type.getType(Friendly.class);
+    private static final jdk.internal.org.objectweb.asm.commons.Method noArgConstructor =
+        jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <init> ()");
+    private static final jdk.internal.org.objectweb.asm.commons.Method staticInitializer =
+        jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <clinit> ()");
+    private static final jdk.internal.org.objectweb.asm.commons.Method Friendly_invokeVirtual_Method;
 
-    private Class<? extends I> spinProxyClass(Class<I> intf, Method[] methods, Class<?>[][] methodsExceptionTypes) {
+    static {
+        try {
+            Friendly_invokeVirtual_Method =
+                jdk.internal.org.objectweb.asm.commons.Method.getMethod(
+                    Friendly.class.getDeclaredMethod("findVirtual", Class.class, String.class, String.class)
+                );
+        }
+        catch (NoSuchMethodException e) {
+            throw new Error(e);
+        }
+    }
+
+    static final class ClassFile {
+        final String className;
+        final byte[] classBytes;
+
+        ClassFile(String className, byte[] classBytes) {
+            this.className = className;
+            this.classBytes = classBytes;
+        }
+    }
+
+    private static ClassFile spinProxyClass(
+        Class<?> intf,
+        Method[] methods,
+        Class<?>[][] methodsExceptionTypes,
+        Method[] targetMethods
+    ) {
 
         String intfName = intf.getName().replace('.', '/');
         int lastSlash = intfName.lastIndexOf('/');
         String pkgPath = lastSlash >= 0 ? intfName.substring(0, lastSlash + 1) : "";
         if (Modifier.isPublic(intf.getModifiers())) pkgPath = "";
         String proxyClassName = pkgPath + proxyClassNamePrefix + nextUniqueNumber.getAndIncrement();
+        Type proxyClass_Type = Type.getObjectType(proxyClassName);
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
@@ -153,7 +209,7 @@ final class FriendlyProxyFactory<I> {
                 FieldVisitor fv = cw.visitField(
                     Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
                     mhFieldNamePrefix + i,
-                    MethodHandle_typeDescriptor,
+                    MethodHandle_Type.getDescriptor(),
                     null,
                     null
                 );
@@ -165,7 +221,7 @@ final class FriendlyProxyFactory<I> {
                 FieldVisitor fv = cw.visitField(
                     Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
                     PROXY_INSTANCE_FIELD_NAME,
-                    "L" + proxyClassName + ";",
+                    proxyClass_Type.getDescriptor(),
                     null,
                     null
                 );
@@ -174,87 +230,59 @@ final class FriendlyProxyFactory<I> {
 
             // generate static initializer
             {
-                MethodVisitor clinit = cw.visitMethod(
+                GeneratorAdapter clinit = new GeneratorAdapter(
                     Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC,
-                    "<clinit>",
-                    "()V",
+                    staticInitializer,
                     null,
-                    null
+                    null,
+                    cw
                 );
-
                 // initialize static mh0, mh1, ... fields
                 for (int i = 0; i < targetMethods.length; i++) {
                     Method targetMethod = targetMethods[i];
-                    // load target method's declaring class
-                    clinit.visitLdcInsn(Type.getType(targetMethod.getDeclaringClass()));
-                    // load method name
-                    clinit.visitLdcInsn(targetMethod.getName());
-                    // load method type descriptor
-                    clinit.visitLdcInsn(
+                    // push target method's declaring class
+                    clinit.push(Type.getType(targetMethod.getDeclaringClass()));
+                    // push method name
+                    clinit.push(targetMethod.getName());
+                    // push method type descriptor
+                    clinit.push(
                         MethodType.methodType(
                             targetMethod.getReturnType(),
                             targetMethod.getParameterTypes()
                         ).toMethodDescriptorString()
                     );
-                    // invoke the Friendly.findVirtual method
-                    clinit.visitMethodInsn(
-                        Opcodes.INVOKESTATIC,
-                        Friendly_className,
-                        Friendly.FIND_VIRTUAL_METHOD_NAME,
-                        Friendly.FIND_VIRTUAL_METHOD_TYPE.toMethodDescriptorString()
-                    );
-                    // put the result to mh0, mh1, ... field
-                    clinit.visitFieldInsn(
-                        Opcodes.PUTSTATIC,
-                        proxyClassName,
-                        mhFieldNamePrefix + i,
-                        MethodHandle_typeDescriptor
-                    );
+                    // invoke the Friendly.findVirtual static method
+                    clinit.invokeStatic(Friendly_Type, Friendly_invokeVirtual_Method);
+                    // store the result into mh0, mh1, ... field
+                    clinit.putStatic(proxyClass_Type, mhFieldNamePrefix + i, MethodHandle_Type);
                 }
-
                 // initialize static INSTANCE field
                 {
                     // create new proxy instance
-                    clinit.visitTypeInsn(Opcodes.NEW, "L" + proxyClassName + ";");
+                    clinit.newInstance(proxyClass_Type);
                     // duplicate reference to newly created instance
-                    clinit.visitInsn(Opcodes.DUP);
+                    clinit.dup();
                     // invoke no-arg constructor
-                    clinit.visitMethodInsn(Opcodes.INVOKESPECIAL, proxyClassName, "<init>", "()V");
+                    clinit.invokeConstructor(proxyClass_Type, noArgConstructor);
                     // assign the instance to "INSTANCE" static field
-                    clinit.visitFieldInsn(
-                        Opcodes.PUTSTATIC,
-                        proxyClassName,
-                        PROXY_INSTANCE_FIELD_NAME,
-                        "L" + proxyClassName + ";"
-                    );
+                    clinit.putStatic(proxyClass_Type, PROXY_INSTANCE_FIELD_NAME, proxyClass_Type);
                 }
-
                 // return
-                clinit.visitInsn(Opcodes.RETURN);
-
+                clinit.returnValue();
                 // end of static initializer
-                clinit.visitEnd();
+                clinit.endMethod();
             }
 
             // generate private no-arg constructor
             {
-                MethodVisitor init = cw.visitMethod(
-                    Opcodes.ACC_PRIVATE,
-                    "<init>",
-                    "()V",
-                    null,
-                    null
-                );
-
-                // invoke super (j.l.Object) constructor
-                init.visitVarInsn(Opcodes.ALOAD, 0);
-                init.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
-
+                GeneratorAdapter init = new GeneratorAdapter(Opcodes.ACC_PRIVATE, noArgConstructor, null, null, cw);
+                // invoke super (Object) constructor
+                init.loadThis();
+                init.invokeConstructor(Type.getType(Object.class), noArgConstructor);
                 // return
-                init.visitInsn(Opcodes.RETURN);
-
+                init.returnValue();
                 // end of constructor
-                init.visitEnd();
+                init.endMethod();
             }
 
             // generate proxy methods
@@ -263,17 +291,42 @@ final class FriendlyProxyFactory<I> {
                 jdk.internal.org.objectweb.asm.commons.Method m =
                     jdk.internal.org.objectweb.asm.commons.Method.getMethod(method);
                 GeneratorAdapter gen = new GeneratorAdapter(Opcodes.ACC_PUBLIC, m, null, getExceptionTypes(method), cw);
-                // TODO...
+                // push the value of mh0, mh1, ... field on the stack
+                gen.getStatic(
+                    proxyClass_Type,
+                    mhFieldNamePrefix + i,
+                    MethodHandle_Type
+                );
+                // push the method parameters on the stack
+                gen.loadArgs();
+                // invoke the MethodHandle.invokeExact method with correct signature for invoking target method
+                Method targetMethod = targetMethods[i];
+                jdk.internal.org.objectweb.asm.commons.Method invokerM =
+                    new jdk.internal.org.objectweb.asm.commons.Method(
+                        "invokeExact",
+                        MethodType.methodType(
+                            targetMethod.getReturnType(),
+                            targetMethod.getParameterTypes()
+                        ).insertParameterTypes(0, targetMethod.getDeclaringClass())
+                            .toMethodDescriptorString()
+                    );
+                gen.invokeVirtual(
+                    MethodHandle_Type,
+                    invokerM
+                );
+                // return the result
+                gen.returnValue();
+                // end of method
+                gen.endMethod();
             }
 
             cw.visitEnd();
         }
 
-        // TODO
-        return null;
+        return new ClassFile(proxyClassName, cw.toByteArray());
     }
 
-    private Type[] getExceptionTypes(Method method) {
+    private static Type[] getExceptionTypes(Method method) {
         Class<?>[] exceptionClasses = method.getExceptionTypes();
         Type[] exceptionTypes = new Type[exceptionClasses.length];
         for (int i = 0; i < exceptionClasses.length; i++) {

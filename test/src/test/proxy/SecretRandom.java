@@ -3,8 +3,6 @@ package test.proxy;
 import si.pele.friendly.Friend;
 import test.MHPerfTest;
 
-import static si.pele.friendly.MHThrows.unchecked;
-
 /**
  */
 public class SecretRandom {
@@ -15,18 +13,17 @@ public class SecretRandom {
     private long seed;
 
     @Friend({MHPerfTest.mh_proxy_call.class})
-    private int nextInt() {
-        try {
-            long nextseed = (seed * multiplier + addend) & mask;
-            seed = nextseed;
-            return (int) (nextseed >>> 16);
-        }
-        catch (Throwable t) {
-            throw unchecked(t);
-        }
+    private final int nextInt() {
+        long nextseed = (seed * multiplier + addend) & mask;
+        seed = nextseed;
+        return (int) (nextseed >>> 16);
     }
 
-    public static final SecretRandomAccess ACCESS = new SecretRandomAccess() {
+    public interface Access {
+        int nextInt(SecretRandom tc);
+    }
+
+    public static final Access ACCESS = new Access() {
         @Override
         public int nextInt(SecretRandom tc) {
             return tc.nextInt();

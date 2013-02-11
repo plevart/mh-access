@@ -20,7 +20,7 @@ public class Friendly {
 
     static {
         try {
-            Field lookupField = MethodHandles.class.getDeclaredField("IMPL_LOOKUP");
+            Field lookupField = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
             lookupField.setAccessible(true);
             lookup = (MethodHandles.Lookup) lookupField.get(null);
         }
@@ -86,9 +86,6 @@ public class Friendly {
     }
 
     // public MethodHandle lookup methods that can only be accessed from friendly proxies' static initializer(s)
-
-    static final String FIND_VIRTUAL_METHOD_NAME = "findVirtual";
-    static final MethodType FIND_VIRTUAL_METHOD_TYPE = MethodType.methodType(MethodHandle.class, Class.class, String.class, String.class);
 
     public static MethodHandle findVirtual(Class<?> refc, String name, String methodTypeDescriptor) {
         Class<?> cc = Reflection.getCallerClass(2);
