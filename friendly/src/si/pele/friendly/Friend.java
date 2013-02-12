@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation that when attached to a field, method or constructor, declares
+ * Annotation, that when attached to a field, method or constructor, declares
  * a set of "friend" classes - classes that are allowed access to the otherwise prohibited
  * field, method or constructor using method handles or proxies obtained via {@link Friendly}
  * static methods.

@@ -24,20 +24,27 @@ import java.security.AccessController;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A factory for friendly proxy classes. Each proxy class is generated to implement the given interface and
- * is defined by the interface's class loader. This happens in the constructor of the proxy factory.
- * After constructor is successfully finished, factory object serves as a holder for the
+ * A package-private factory for friendly proxy classes. Each proxy class is generated to implement the
+ * given interface and is defined by the interface's class loader. This happens in the constructor of
+ * the proxy factory. After constructor is successfully finished, factory object serves as a holder for the
  * {@code Class} object (accessed by {@link #getProxyClass()}) representing generated proxy class and an array
  * of target methods (accessed by {@link #getTargetMethods()}) that the proxy forwards requests to.
- * Both are retrieved by {@link Friendly#proxy(Class)} method which also obtains the
+ * Both are used by public API {@link Friendly#proxy(Class)} method which also obtains the
  * singleton proxy instance by reading the private static final field of the proxy class and governs
- * access to this instance by it's internal policy taking into account all target methods.
+ * access to this instance by checking access permissions of a caller class to the target methods.
  */
 final class FriendlyProxyFactory<I> {
 
     private final Class<? extends I> proxyClass;
     private final Method[] targetMethods;
 
+    /**
+     * Creates a factory object holding a generated proxy class for given interface.
+     *
+     * @param intf the interface to generate proxy class for
+     * @throws IllegalArgumentException if anything that would match proxy class methods with target methods is not
+     *                                  consistent as defined by {@link Friendly#proxy(Class)} method.
+     */
     FriendlyProxyFactory(Class<I> intf) throws IllegalArgumentException {
 
         if (!intf.isInterface())
@@ -173,19 +180,15 @@ final class FriendlyProxyFactory<I> {
         jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <init> ()");
     private static final jdk.internal.org.objectweb.asm.commons.Method staticInitializer =
         jdk.internal.org.objectweb.asm.commons.Method.getMethod("void <clinit> ()");
-    private static final jdk.internal.org.objectweb.asm.commons.Method Friendly_findVirtual;
-
-    static {
-        try {
-            Friendly_findVirtual =
-                jdk.internal.org.objectweb.asm.commons.Method.getMethod(
-                    Friendly.class.getDeclaredMethod("findVirtual", Class.class, String.class, String.class)
-                );
-        }
-        catch (NoSuchMethodException e) {
-            throw new Error(e);
-        }
-    }
+    private static final jdk.internal.org.objectweb.asm.commons.Method Friendly_findVirtual =
+        jdk.internal.org.objectweb.asm.commons.Method.getMethod(
+            AccessController.doPrivileged(
+                new Friendly.GetDeclaredMethodAction(
+                    Friendly.class, "findVirtual",
+                    Class.class, String.class, String.class
+                )
+            )
+        );
 
     static final class ClassFile {
         final String className;
@@ -215,7 +218,14 @@ final class FriendlyProxyFactory<I> {
 
         // generate proxy class
         {
-            cw.visit(classFileVersion, Opcodes.ACC_SUPER | Opcodes.ACC_FINAL, proxyClassName, null, "java/lang/Object", new String[]{intfName});
+            cw.visit(
+                classFileVersion,
+                Opcodes.ACC_SUPER | Opcodes.ACC_FINAL,
+                proxyClassName,
+                null,
+                "java/lang/Object",
+                new String[]{intfName}
+            );
 
             // generate private static final fields with names: mh0, mh1, ... and type java.lang.invoke.MethodHandle
             for (int i = 0; i < targetMethods.length; i++) {
@@ -303,18 +313,20 @@ final class FriendlyProxyFactory<I> {
                 Method method = methods[i];
                 jdk.internal.org.objectweb.asm.commons.Method m =
                     jdk.internal.org.objectweb.asm.commons.Method.getMethod(method);
-                GeneratorAdapter gen = new GeneratorAdapter(Opcodes.ACC_PUBLIC, m, null, getExceptionTypes(method), cw);
-                // push the value of mh0, mh1, ... field on the stack
-                gen.getStatic(
-                    proxyClass_Type,
-                    mhFieldNamePrefix + i,
-                    MethodHandle_Type
+                GeneratorAdapter gen = new GeneratorAdapter(
+                    Opcodes.ACC_PUBLIC,
+                    m,
+                    null,
+                    getTypes(methodsExceptionTypes[i]),
+                    cw
                 );
+                // push the value of mh0, mh1, ... field on the stack
+                gen.getStatic(proxyClass_Type, mhFieldNamePrefix + i, MethodHandle_Type);
                 // push the method parameters on the stack
                 gen.loadArgs();
                 // invoke the MethodHandle.invokeExact method with correct signature for invoking target method
                 Method targetMethod = targetMethods[i];
-                jdk.internal.org.objectweb.asm.commons.Method invokerM =
+                jdk.internal.org.objectweb.asm.commons.Method invokerExactM =
                     new jdk.internal.org.objectweb.asm.commons.Method(
                         "invokeExact",
                         MethodType.methodType(
@@ -325,7 +337,7 @@ final class FriendlyProxyFactory<I> {
                     );
                 gen.invokeVirtual(
                     MethodHandle_Type,
-                    invokerM
+                    invokerExactM
                 );
                 // return the result
                 gen.returnValue();
@@ -339,13 +351,12 @@ final class FriendlyProxyFactory<I> {
         return new ClassFile(proxyClassName, cw.toByteArray());
     }
 
-    private static Type[] getExceptionTypes(Method method) {
-        Class<?>[] exceptionClasses = method.getExceptionTypes();
-        Type[] exceptionTypes = new Type[exceptionClasses.length];
-        for (int i = 0; i < exceptionClasses.length; i++) {
-            exceptionTypes[i] = Type.getType(exceptionClasses[i]);
+    private static Type[] getTypes(Class<?>[] classes) {
+        Type[] types = new Type[classes.length];
+        for (int i = 0; i < classes.length; i++) {
+            types[i] = Type.getType(classes[i]);
         }
-        return exceptionTypes;
+        return types;
     }
 
     // access to private native method in j.l.r.Proxy
