@@ -6,11 +6,13 @@ mh-access
 
 This Java library allows Java code to access fields, methods and constructors that would otherwise
 be prohibited because of Java accessibility checks. It does this using method handles under the hood.
-Method handles are optimized by JIT into machine instructions that execute with same speed as instructions
-generated for normal field/method/constructor accesses. Measured performance is the same.
+Method handles are optimized by JIT into machine instructions that execute at about the same speed as instructions
+generated for normal field/method/constructor accesses. Measurements indicate that JIT optimized code
+executes with no performance penalty when using this library.
 
 Access to otherwise prohibited members is governed by special *@Friend* annotation which declares
-caller classes that are granted access to a particular member. Take for example the following class:
+caller classes that are granted access to a particular field method or constructor.
+Take for example the following class:
 
 ~~~~~ Java
 public class Credentials {
@@ -40,8 +42,8 @@ public class Credentials {
 }
 ~~~~~
 
-Access on field *password* and method *getPassword()* is normally prohibited to other classes, but
-special *@Friend* annotations allow access to particular classes using method handles:
+Access on *password* field and *getPassword()* method is normally prohibited to other classes, but
+special *@Friend* annotations allow access to particular classes when using method handles:
 
 ~~~~~ Java
 public class FriendClass1 {
@@ -84,5 +86,4 @@ public class FriendClass2 {
 }
 ~~~~~
 
-Even using proxies the access is optimized by JIT so that there is no performance penalty compared to normal method call.
-That means that even access through proxy is in-lined when the normal method call is in-lined...
+See javadoc of [si.pele.friendly.Friendly](friendly/src/si/pele/friendly/Friendly.java) for more details.
