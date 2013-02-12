@@ -6,9 +6,6 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="friendly" />
-    <orderEntry type="module" module-name="reflect" />
-    <orderEntry type="module" module-name="micro-bench" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
