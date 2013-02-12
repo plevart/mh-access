@@ -8,7 +8,8 @@ This Java library allows Java code to access fields, methods and constructors th
 be prohibited because of Java accessibility checks. It does this using method handles under the hood.
 Method handles are optimized by JIT into machine instructions that execute at about the same speed as instructions
 generated for normal field/method/constructor accesses. Measurements indicate that JIT optimized code
-executes with no performance penalty when using this library.
+executes with no performance penalty when using this library as opposed to making normal method/field/constructor
+accesses.
 
 Access to otherwise prohibited members is governed by special *@Friend* annotation which declares
 caller classes that are granted access to a particular field method or constructor.
