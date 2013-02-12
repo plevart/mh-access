@@ -41,7 +41,7 @@ public class Friendly {
      * The returned method handle will have variable arity if and only if the method's variable arity modifier
      * bit ( 0x0080) is set.
      *
-     * @param rcv            the class or interface in which the method is declared
+     * @param declaringClass the class or interface in which the method is declared
      * @param methodName     the name of the method
      * @param parameterTypes the parameter types array
      * @return a method handle which can invoke the method
@@ -49,7 +49,7 @@ public class Friendly {
      * @throws FriendlyAccessException  (wrapping {@link IllegalAccessException}) if caller class does not have access
      *                                  to the method
      */
-    public static MethodHandle method(Class<?> rcv, String methodName, Class<?>... parameterTypes)
+    public static MethodHandle method(Class<?> declaringClass, String methodName, Class<?>... parameterTypes)
         throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
@@ -57,7 +57,7 @@ public class Friendly {
                 .unreflect(
                     accessible(
                         AccessController.doPrivileged(
-                            new GetDeclaredMethodAction(rcv, methodName, parameterTypes)
+                            new GetDeclaredMethodAction(declaringClass, methodName, parameterTypes)
                         ),
                         cc
                     )
@@ -77,14 +77,14 @@ public class Friendly {
      * The returned method handle will have variable arity if and only if the constructor's variable arity modifier
      * bit ( 0x0080) is set.
      *
-     * @param rcv            the class in which the constructor is declared
+     * @param declaringClass the class in which the constructor is declared
      * @param parameterTypes the parameter types array
      * @return a method handle which can invoke the constructor
      * @throws IllegalArgumentException (wrapping {@link NoSuchMethodException}) if a matching constructor is not found
      * @throws FriendlyAccessException  (wrapping {@link IllegalAccessException}) if caller class does not have access
      *                                  to the constructor
      */
-    public static MethodHandle constructor(Class<?> rcv, Class<?>... parameterTypes)
+    public static MethodHandle constructor(Class<?> declaringClass, Class<?>... parameterTypes)
         throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
@@ -92,7 +92,7 @@ public class Friendly {
                 .unreflectConstructor(
                     accessible(
                         AccessController.doPrivileged(
-                            new GetDeclaredConstructorAction(rcv, parameterTypes)
+                            new GetDeclaredConstructorAction(declaringClass, parameterTypes)
                         ),
                         cc
                     )
@@ -110,14 +110,14 @@ public class Friendly {
      * with the @{@link Friend} annotation specifying the caller class in it's list, normal Java access checking
      * is performed immediately on behalf of the caller class.
      *
-     * @param rcv       the class in which the field is declared
-     * @param fieldName the name of the field
+     * @param declaringClass the class in which the field is declared
+     * @param fieldName      the name of the field
      * @return a method handle which can read the field's value
      * @throws IllegalArgumentException (wrapping {@link NoSuchFieldException}) if a matching field is not found
      * @throws FriendlyAccessException  (wrapping {@link IllegalAccessException}) if caller class does not have access
      *                                  to the field
      */
-    public static MethodHandle getter(Class<?> rcv, String fieldName)
+    public static MethodHandle getter(Class<?> declaringClass, String fieldName)
         throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
@@ -125,7 +125,7 @@ public class Friendly {
                 .unreflectGetter(
                     accessible(
                         AccessController.doPrivileged(
-                            new GetDeclaredFieldAction(rcv, fieldName)
+                            new GetDeclaredFieldAction(declaringClass, fieldName)
                         ),
                         cc
                     )
@@ -143,14 +143,14 @@ public class Friendly {
      * and the value to be stored. Unless the field is annotated with the @{@link Friend} annotation specifying
      * the caller class in it's list, normal Java access checking is performed immediately on behalf of the caller class.
      *
-     * @param rcv       the class in which the field is declared
-     * @param fieldName the name of the field
+     * @param declaringClass the class in which the field is declared
+     * @param fieldName      the name of the field
      * @return a method handle which can write the field's value
      * @throws IllegalArgumentException (wrapping {@link NoSuchFieldException}) if a matching field is not found
      * @throws FriendlyAccessException  (wrapping {@link IllegalAccessException}) if caller class does not have access
      *                                  to the field
      */
-    public static MethodHandle setter(Class<?> rcv, String fieldName)
+    public static MethodHandle setter(Class<?> declaringClass, String fieldName)
         throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
         try {
@@ -158,7 +158,7 @@ public class Friendly {
                 .unreflectSetter(
                     accessible(
                         AccessController.doPrivileged(
-                            new GetDeclaredFieldAction(rcv, fieldName)
+                            new GetDeclaredFieldAction(declaringClass, fieldName)
                         ),
                         cc
                     )
@@ -170,24 +170,41 @@ public class Friendly {
     }
 
     /**
-     * A friendly proxy factory method. Returns a singleton proxy object implementing given interface. The method
+     * A friendly proxy factory method. Returns a singleton proxy object implementing given interface. Method
      * calls on the returned object are forwarded to target methods deduced from proxy interface methods using the
      * following rules:
      * <ul>
-     * <li>each proxy interface method must have at least one parameter. The first parameter type is taken as the
+     * <li>The name of each proxy method must match the name of the corresponding target method.
+     * </li>
+     * <li>Each proxy interface method must have at least one parameter. The type of the first parameter is taken as the
      * target method's declaring class/interface. When called, the first parameter is used as a receiver of the
      * forwarded call.
      * </li>
-     * <li>the rest of the proxy method parameters' types (if any) must exactly match the target method parameters'.
-     * When called they are passed to target method unchanged.
+     * <li>The rest of the proxy method parameters' types (if any) must exactly match the corresponding target method
+     * parameters' types. When called they are passed to target method unchanged.
+     * </li>
+     * <li>The return type of the target method must exactly match the return type of the corresponding proxy interface
+     * method. When called, the returned value (if any) is passed from the target method unchanged.
+     * </li>
+     * <li>If the target method declares any checked exceptions, at least those exceptions must also be declared
+     * by the corresponding proxy interface method. When called, any exceptions thrown by the target method are
+     * passed unchanged.
      * </li>
      * </ul>
+     * It follows from the above rules, that proxy objects created by this method can only be used to invoke target
+     * instance methods. This restriction can be lifted in future versions of the rules (for example, to invoke
+     * target static methods, a kind of {@code @StaticTarget(TargetClass.class)} annotation on proxy methods could
+     * be used).<p>
+     * Access checks are performed when calling this method to obtain the proxy instance. Each target method is checked
+     * the same way as when requesting a single method handle via {@link #method} for example. The reference to the
+     * returned proxy object should be treated as a valuable asset and not passed to other code lightly.
      *
-     * @param intf
-     * @param <I>
-     * @return
-     * @throws IllegalArgumentException
-     * @throws FriendlyAccessException
+     * @param intf the proxy interface that is to be implemented by proxy class
+     * @param <I>  the type of proxy interface
+     * @return the singleton object of a generated class implementing specified proxy interface
+     * @throws IllegalArgumentException if any of the rules described above are broken
+     * @throws FriendlyAccessException  if access to any target method deduced from the proxy methods is not
+     *                                  granted to the caller requesting the proxy instance
      */
     public static <I> I proxy(Class<I> intf) throws IllegalArgumentException, FriendlyAccessException {
         Class<?> cc = Reflection.getCallerClass(2);
