@@ -26,7 +26,6 @@ import static test.perf.SecretRandom.multiplier;
  * @author peter
  */
 @Warmup(iterations = 5, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 5, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
 @State(Scope.Thread)
 public class MHPerfTestJMH {
     private final SecretRandom sr = new SecretRandom();
