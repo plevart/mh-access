@@ -14,10 +14,10 @@ public final class SecretRandom {
     public static final long addend = 0xBL;
     public static final long mask = (1L << 48) - 1;
 
-    @Friend(MHPerfTest.mh_field_access.class)
+    @Friend({MHPerfTest.mh_field_access.class, MHPerfTestJMH.class})
     long seed;
 
-    @Friend({MHPerfTest.mh_call.class, MHPerfTest.proxy_call.class})
+    @Friend({MHPerfTest.mh_call.class, MHPerfTest.proxy_call.class, MHPerfTestJMH.class})
     int nextInt() {
         long nextseed = (seed * multiplier + addend) & mask;
         seed = nextseed;
