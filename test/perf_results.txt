@@ -1,112 +1,107 @@
 # Measurement Section
-# Runtime (per iteration): 3000ms
-# Iterations: 5
-# Thread counts (concurrent threads per iteration): [1, 1, 1, 1, 1]
+# Starting run at: Tue Feb 19 14:23:31 CET 2013
+# Runtime (per iteration): 5s
+# Iterations: 3
+# Thread counts (concurrent threads per iteration): [1, 1, 1]
 # Threads will synchronize iterations
-# Running: test.perf.generated.throughput.MHPerfTestJMH.mh_call
-# Warmup Iteration   1 (3000ms in 1 thread): 125168.117 ops/msec
-# Warmup Iteration   2 (3000ms in 1 thread): 125610.073 ops/msec
-# Warmup Iteration   3 (3000ms in 1 thread): 125288.883 ops/msec
-# Warmup Iteration   4 (3000ms in 1 thread): 125296.798 ops/msec
-# Warmup Iteration   5 (3000ms in 1 thread): 125285.147 ops/msec
-Iteration   1 (3000ms in 1 thread): 125280.786 ops/msec
-Iteration   2 (3000ms in 1 thread): 125290.544 ops/msec
-Iteration   3 (3000ms in 1 thread): 125284.731 ops/msec
-Iteration   4 (3000ms in 1 thread): 125288.521 ops/msec
-Iteration   5 (3000ms in 1 thread): 125287.444 ops/msec
+# Running: test.perf.generated.avgtime.MHPerfTestJMH.mh_call
+# Warmup Iteration   1 (1000ms in 1 thread): 2.553 nsec/op
+# Warmup Iteration   2 (1000ms in 1 thread): 2.518 nsec/op
+# Warmup Iteration   3 (1000ms in 1 thread): 2.494 nsec/op
+# Warmup Iteration   4 (1000ms in 1 thread): 2.495 nsec/op
+# Warmup Iteration   5 (1000ms in 1 thread): 2.495 nsec/op
+Iteration   1 (5s in 1 thread): 2.494 nsec/op
+Iteration   2 (5s in 1 thread): 2.494 nsec/op
+Iteration   3 (5s in 1 thread): 2.493 nsec/op
 
-Run result: 125286.405 ±(95%) 4.690 ±(99%) 7.777 ops/msec
-Run statistics: min = 125280.786, avg = 125286.405, max = 125290.544, stdev = 3.777
-Run confidence intervals: 95% [125281.716, 125291.095], 99% [125278.629, 125294.182]
+Run result: 2.494 ±(95%) 0.001 ±(99%) 0.001 nsec/op
+Run statistics: min = 2.493, avg = 2.494, max = 2.494, stdev = 0.000
+Run confidence intervals: 95% [2.493, 2.494], 99% [2.492, 2.495]
 
 
-# Runtime (per iteration): 3000ms
-# Iterations: 5
-# Thread counts (concurrent threads per iteration): [1, 1, 1, 1, 1]
+# Starting run at: Tue Feb 19 14:23:51 CET 2013
+# Runtime (per iteration): 5s
+# Iterations: 3
+# Thread counts (concurrent threads per iteration): [1, 1, 1]
 # Threads will synchronize iterations
-# Running: test.perf.generated.throughput.MHPerfTestJMH.mh_field_access
-# Warmup Iteration   1 (3000ms in 1 thread): 124798.220 ops/msec
-# Warmup Iteration   2 (3000ms in 1 thread): 125369.510 ops/msec
-# Warmup Iteration   3 (3000ms in 1 thread): 125238.591 ops/msec
-# Warmup Iteration   4 (3000ms in 1 thread): 125252.946 ops/msec
-# Warmup Iteration   5 (3000ms in 1 thread): 125247.395 ops/msec
-Iteration   1 (3000ms in 1 thread): 124956.743 ops/msec
-Iteration   2 (3000ms in 1 thread): 125299.422 ops/msec
-Iteration   3 (3000ms in 1 thread): 125298.750 ops/msec
-Iteration   4 (3000ms in 1 thread): 125298.704 ops/msec
-Iteration   5 (3000ms in 1 thread): 125301.123 ops/msec
+# Running: test.perf.generated.avgtime.MHPerfTestJMH.mh_field_access
+# Warmup Iteration   1 (1000ms in 1 thread): 2.532 nsec/op
+# Warmup Iteration   2 (1000ms in 1 thread): 2.520 nsec/op
+# Warmup Iteration   3 (1000ms in 1 thread): 2.494 nsec/op
+# Warmup Iteration   4 (1000ms in 1 thread): 2.494 nsec/op
+# Warmup Iteration   5 (1000ms in 1 thread): 2.494 nsec/op
+Iteration   1 (5s in 1 thread): 2.494 nsec/op
+Iteration   2 (5s in 1 thread): 2.494 nsec/op
+Iteration   3 (5s in 1 thread): 2.494 nsec/op
 
-Run result: 125230.948 ±(95%) 190.333 ±(99%) 315.623 ops/msec
-Run statistics: min = 124956.743, avg = 125230.948, max = 125301.123, stdev = 153.288
-Run confidence intervals: 95% [125040.616, 125421.281], 99% [124915.326, 125546.571]
+Run result: 2.494 ±(95%) 0.000 ±(99%) 0.001 nsec/op
+Run statistics: min = 2.494, avg = 2.494, max = 2.494, stdev = 0.000
+Run confidence intervals: 95% [2.493, 2.494], 99% [2.493, 2.494]
 
 
-# Runtime (per iteration): 3000ms
-# Iterations: 5
-# Thread counts (concurrent threads per iteration): [1, 1, 1, 1, 1]
+# Starting run at: Tue Feb 19 14:24:11 CET 2013
+# Runtime (per iteration): 5s
+# Iterations: 3
+# Thread counts (concurrent threads per iteration): [1, 1, 1]
 # Threads will synchronize iterations
-# Running: test.perf.generated.throughput.MHPerfTestJMH.normal_call
-# Warmup Iteration   1 (3000ms in 1 thread): 125204.449 ops/msec
-# Warmup Iteration   2 (3000ms in 1 thread): 125694.457 ops/msec
-# Warmup Iteration   3 (3000ms in 1 thread): 125908.798 ops/msec
-# Warmup Iteration   4 (3000ms in 1 thread): 125909.109 ops/msec
-# Warmup Iteration   5 (3000ms in 1 thread): 125906.897 ops/msec
-Iteration   1 (3000ms in 1 thread): 125907.356 ops/msec
-Iteration   2 (3000ms in 1 thread): 125907.475 ops/msec
-Iteration   3 (3000ms in 1 thread): 125908.146 ops/msec
-Iteration   4 (3000ms in 1 thread): 125897.289 ops/msec
-Iteration   5 (3000ms in 1 thread): 125883.033 ops/msec
+# Running: test.perf.generated.avgtime.MHPerfTestJMH.normal_call
+# Warmup Iteration   1 (1000ms in 1 thread): 2.530 nsec/op
+# Warmup Iteration   2 (1000ms in 1 thread): 2.518 nsec/op
+# Warmup Iteration   3 (1000ms in 1 thread): 2.493 nsec/op
+# Warmup Iteration   4 (1000ms in 1 thread): 2.495 nsec/op
+# Warmup Iteration   5 (1000ms in 1 thread): 2.494 nsec/op
+Iteration   1 (5s in 1 thread): 2.500 nsec/op
+Iteration   2 (5s in 1 thread): 2.494 nsec/op
+Iteration   3 (5s in 1 thread): 2.494 nsec/op
 
-Run result: 125900.660 ±(95%) 13.451 ±(99%) 22.305 ops/msec
-Run statistics: min = 125883.033, avg = 125900.660, max = 125908.146, stdev = 10.833
-Run confidence intervals: 95% [125887.209, 125914.111], 99% [125878.355, 125922.965]
+Run result: 2.496 ±(95%) 0.009 ±(99%) 0.022 nsec/op
+Run statistics: min = 2.494, avg = 2.496, max = 2.500, stdev = 0.004
+Run confidence intervals: 95% [2.486, 2.505], 99% [2.474, 2.517]
 
 
-# Runtime (per iteration): 3000ms
-# Iterations: 5
-# Thread counts (concurrent threads per iteration): [1, 1, 1, 1, 1]
+# Starting run at: Tue Feb 19 14:24:31 CET 2013
+# Runtime (per iteration): 5s
+# Iterations: 3
+# Thread counts (concurrent threads per iteration): [1, 1, 1]
 # Threads will synchronize iterations
-# Running: test.perf.generated.throughput.MHPerfTestJMH.normal_field_access
-# Warmup Iteration   1 (3000ms in 1 thread): 125446.926 ops/msec
-# Warmup Iteration   2 (3000ms in 1 thread): 125694.727 ops/msec
-# Warmup Iteration   3 (3000ms in 1 thread): 125899.489 ops/msec
-# Warmup Iteration   4 (3000ms in 1 thread): 125905.820 ops/msec
-# Warmup Iteration   5 (3000ms in 1 thread): 125907.356 ops/msec
-Iteration   1 (3000ms in 1 thread): 125617.892 ops/msec
-Iteration   2 (3000ms in 1 thread): 125905.980 ops/msec
-Iteration   3 (3000ms in 1 thread): 125907.790 ops/msec
-Iteration   4 (3000ms in 1 thread): 125906.255 ops/msec
-Iteration   5 (3000ms in 1 thread): 125906.060 ops/msec
+# Running: test.perf.generated.avgtime.MHPerfTestJMH.normal_field_access
+# Warmup Iteration   1 (1000ms in 1 thread): 2.537 nsec/op
+# Warmup Iteration   2 (1000ms in 1 thread): 2.518 nsec/op
+# Warmup Iteration   3 (1000ms in 1 thread): 2.494 nsec/op
+# Warmup Iteration   4 (1000ms in 1 thread): 2.494 nsec/op
+# Warmup Iteration   5 (1000ms in 1 thread): 2.494 nsec/op
+Iteration   1 (5s in 1 thread): 2.494 nsec/op
+Iteration   2 (5s in 1 thread): 2.494 nsec/op
+Iteration   3 (5s in 1 thread): 2.494 nsec/op
 
-Run result: 125848.796 ±(95%) 160.275 ±(99%) 265.779 ops/msec
-Run statistics: min = 125617.892, avg = 125848.796, max = 125907.790, stdev = 129.081
-Run confidence intervals: 95% [125688.520, 126009.071], 99% [125583.016, 126114.575]
+Run result: 2.494 ±(95%) 0.001 ±(99%) 0.001 nsec/op
+Run statistics: min = 2.494, avg = 2.494, max = 2.494, stdev = 0.000
+Run confidence intervals: 95% [2.494, 2.495], 99% [2.493, 2.495]
 
 
-# Runtime (per iteration): 3000ms
-# Iterations: 5
-# Thread counts (concurrent threads per iteration): [1, 1, 1, 1, 1]
+# Starting run at: Tue Feb 19 14:24:51 CET 2013
+# Runtime (per iteration): 5s
+# Iterations: 3
+# Thread counts (concurrent threads per iteration): [1, 1, 1]
 # Threads will synchronize iterations
-# Running: test.perf.generated.throughput.MHPerfTestJMH.proxy_call
-# Warmup Iteration   1 (3000ms in 1 thread): 125236.690 ops/msec
-# Warmup Iteration   2 (3000ms in 1 thread): 125692.457 ops/msec
-# Warmup Iteration   3 (3000ms in 1 thread): 125902.098 ops/msec
-# Warmup Iteration   4 (3000ms in 1 thread): 125906.714 ops/msec
-# Warmup Iteration   5 (3000ms in 1 thread): 125906.641 ops/msec
-Iteration   1 (3000ms in 1 thread): 125906.882 ops/msec
-Iteration   2 (3000ms in 1 thread): 125906.336 ops/msec
-Iteration   3 (3000ms in 1 thread): 125896.179 ops/msec
-Iteration   4 (3000ms in 1 thread): 125904.592 ops/msec
-Iteration   5 (3000ms in 1 thread): 125902.172 ops/msec
+# Running: test.perf.generated.avgtime.MHPerfTestJMH.proxy_call
+# Warmup Iteration   1 (1000ms in 1 thread): 2.563 nsec/op
+# Warmup Iteration   2 (1000ms in 1 thread): 2.531 nsec/op
+# Warmup Iteration   3 (1000ms in 1 thread): 2.506 nsec/op
+# Warmup Iteration   4 (1000ms in 1 thread): 2.506 nsec/op
+# Warmup Iteration   5 (1000ms in 1 thread): 2.507 nsec/op
+Iteration   1 (5s in 1 thread): 2.505 nsec/op
+Iteration   2 (5s in 1 thread): 2.505 nsec/op
+Iteration   3 (5s in 1 thread): 2.505 nsec/op
 
-Run result: 125903.232 ±(95%) 5.401 ±(99%) 8.956 ops/msec
-Run statistics: min = 125896.179, avg = 125903.232, max = 125906.882, stdev = 4.349
-Run confidence intervals: 95% [125897.831, 125908.633], 99% [125894.276, 125912.188]
+Run result: 2.505 ±(95%) 0.000 ±(99%) 0.001 nsec/op
+Run statistics: min = 2.505, avg = 2.505, max = 2.505, stdev = 0.000
+Run confidence intervals: 95% [2.505, 2.506], 99% [2.504, 2.506]
 
 
 Benchmark                                   Thr    Cnt  Sec         Mean   Mean error          Var    Units
-t.p.g.t.MHPerfTestJMH.mh_call                 1      5    3   125286.405        7.777       14.264 ops/msec
-t.p.g.t.MHPerfTestJMH.mh_field_access         1      5    3   125230.948      315.623    23497.308 ops/msec
-t.p.g.t.MHPerfTestJMH.normal_call             1      5    3   125900.660       22.305      117.349 ops/msec
-t.p.g.t.MHPerfTestJMH.normal_field_access     1      5    3   125848.796      265.779    16661.872 ops/msec
-t.p.g.t.MHPerfTestJMH.proxy_call              1      5    3   125903.232        8.956       18.918 ops/msec
+t.p.g.a.MHPerfTestJMH.mh_call                 1      3    5        2.494        0.001        0.000  nsec/op
+t.p.g.a.MHPerfTestJMH.mh_field_access         1      3    5        2.494        0.001        0.000  nsec/op
+t.p.g.a.MHPerfTestJMH.normal_call             1      3    5        2.496        0.022        0.000  nsec/op
+t.p.g.a.MHPerfTestJMH.normal_field_access     1      3    5        2.494        0.001        0.000  nsec/op
+t.p.g.a.MHPerfTestJMH.proxy_call              1      3    5        2.505        0.001        0.000  nsec/op

@@ -10,7 +10,6 @@ import si.pele.friendly.MHThrows;
 import si.pele.microbench.TestRunner;
 
 import java.lang.invoke.MethodHandle;
-import java.rmi.RMISecurityManager;
 
 import static si.pele.friendly.MHThrows.unchecked;
 import static test.perf.SecretRandom.addend;
@@ -25,20 +24,12 @@ public class MHPerfTest extends TestRunner {
     public static class normal_field_access extends Test {
         private final SecretRandom sr = new SecretRandom();
 
-        private int nextInt() {
+        @Override
+        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
             long oldseed = sr.seed;
             long nextseed = (oldseed * multiplier + addend) & mask;
             sr.seed = nextseed;
-            return (int) (nextseed >>> 16);
-        }
-
-        @Override
-        protected void doOp() {
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
+            devNull1.yield((int) (nextseed >>> 16));
         }
     }
 
@@ -47,25 +38,17 @@ public class MHPerfTest extends TestRunner {
         private static final MethodHandle seedSetter = Friendly.setter(SecretRandom.class, "seed");
         private final SecretRandom sr = new SecretRandom();
 
-        private int nextInt() {
+        @Override
+        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
             try {
                 long oldseed = (long) seedGetter.invokeExact(sr);
                 long nextseed = (oldseed * multiplier + addend) & mask;
                 seedSetter.invokeExact(sr, nextseed);
-                return (int) (nextseed >>> 16);
+                devNull1.yield((int) (nextseed >>> 16));
             }
             catch (Throwable t) {
                 throw unchecked(t);
             }
-        }
-
-        @Override
-        protected void doOp() {
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
-            consume(nextInt());
         }
     }
 
@@ -73,12 +56,8 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp() {
-            consume(sr.nextInt());
-            consume(sr.nextInt());
-            consume(sr.nextInt());
-            consume(sr.nextInt());
-            consume(sr.nextInt());
+        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+            devNull1.yield(sr.nextInt());
         }
     }
 
@@ -87,13 +66,9 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp() {
+        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
             try {
-                consume((int) nextIntMH.invokeExact(sr));
-                consume((int) nextIntMH.invokeExact(sr));
-                consume((int) nextIntMH.invokeExact(sr));
-                consume((int) nextIntMH.invokeExact(sr));
-                consume((int) nextIntMH.invokeExact(sr));
+                devNull1.yield((int) nextIntMH.invokeExact(sr));
             }
             catch (Throwable t) {
                 throw MHThrows.unchecked(t);
@@ -110,23 +85,16 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp() {
-            consume(sra.nextInt(sr));
-            consume(sra.nextInt(sr));
-            consume(sra.nextInt(sr));
-            consume(sra.nextInt(sr));
-            consume(sra.nextInt(sr));
+        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+            devNull1.yield(sra.nextInt(sr));
         }
     }
 
     public static void main(String[] args) throws Throwable {
-        System.setSecurityManager(new RMISecurityManager());
-
-        doTest(normal_field_access.class, 5000L, 1, 8, 1);
-        doTest(mh_field_access.class, 5000L, 1, 8, 1);
-
-        doTest(normal_call.class, 5000L, 1, 8, 1);
         doTest(mh_call.class, 5000L, 1, 8, 1);
+        doTest(mh_field_access.class, 5000L, 1, 8, 1);
+        doTest(normal_call.class, 5000L, 1, 8, 1);
+        doTest(normal_field_access.class, 5000L, 1, 8, 1);
         doTest(proxy_call.class, 5000L, 1, 8, 1);
     }
 }
