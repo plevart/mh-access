@@ -7,6 +7,7 @@ package test.perf;
 
 import si.pele.friendly.Friendly;
 import si.pele.friendly.MHThrows;
+import si.pele.microbench.DevNull;
 import si.pele.microbench.TestRunner;
 
 import java.lang.invoke.MethodHandle;
@@ -21,7 +22,7 @@ import static test.perf.SecretRandom.multiplier;
  */
 public class MHPerfTest extends TestRunner {
 
-    public static class normal_field_access extends Test {
+    public static final class normal_field_access extends Test {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
@@ -33,7 +34,7 @@ public class MHPerfTest extends TestRunner {
         }
     }
 
-    public static class mh_field_access extends Test {
+    public static final class mh_field_access extends Test {
         private static final MethodHandle seedGetter = Friendly.getter(SecretRandom.class, "seed");
         private static final MethodHandle seedSetter = Friendly.setter(SecretRandom.class, "seed");
         private final SecretRandom sr = new SecretRandom();
@@ -52,7 +53,7 @@ public class MHPerfTest extends TestRunner {
         }
     }
 
-    public static class normal_call extends Test {
+    public static final class normal_call extends Test {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
@@ -61,7 +62,7 @@ public class MHPerfTest extends TestRunner {
         }
     }
 
-    public static class mh_call extends Test {
+    public static final class mh_call extends Test {
         private static final MethodHandle nextIntMH = Friendly.method(SecretRandom.class, "nextInt");
         private final SecretRandom sr = new SecretRandom();
 
@@ -76,7 +77,7 @@ public class MHPerfTest extends TestRunner {
         }
     }
 
-    public static class proxy_call extends Test {
+    public static final class proxy_call extends Test {
         interface SRA {
             int nextInt(SecretRandom tc);
         }
@@ -91,10 +92,10 @@ public class MHPerfTest extends TestRunner {
     }
 
     public static void main(String[] args) throws Throwable {
-        doTest(mh_call.class, 5000L, 1, 8, 1);
-        doTest(mh_field_access.class, 5000L, 1, 8, 1);
         doTest(normal_call.class, 5000L, 1, 8, 1);
         doTest(normal_field_access.class, 5000L, 1, 8, 1);
+        doTest(mh_call.class, 5000L, 1, 8, 1);
+        doTest(mh_field_access.class, 5000L, 1, 8, 1);
         doTest(proxy_call.class, 5000L, 1, 8, 1);
     }
 }

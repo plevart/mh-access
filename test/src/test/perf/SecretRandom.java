@@ -15,7 +15,9 @@ public final class SecretRandom {
     public static final long mask = (1L << 48) - 1;
 
     @Friend({MHPerfTest.mh_field_access.class, MHPerfTestJMH.class})
+    private long l0, l1, l2, l3, l4, l5, l6, l7;
     long seed;
+    private long l8, l9, la, lb, lc, ld, le, lf;
 
     @Friend({MHPerfTest.mh_call.class, MHPerfTest.proxy_call.class, MHPerfTestJMH.class})
     int nextInt() {
