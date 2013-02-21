@@ -7,7 +7,6 @@ package test.perf;
 
 import si.pele.friendly.Friendly;
 import si.pele.friendly.MHThrows;
-import si.pele.microbench.DevNull;
 import si.pele.microbench.TestRunner;
 
 import java.lang.invoke.MethodHandle;
@@ -26,11 +25,13 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
-            long oldseed = sr.seed;
-            long nextseed = (oldseed * multiplier + addend) & mask;
-            sr.seed = nextseed;
-            devNull1.yield((int) (nextseed >>> 16));
+        protected void doLoop(Loop loop, DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+            while (loop.nextIteration()) {
+                long oldseed = sr.seed;
+                long nextseed = (oldseed * multiplier + addend) & mask;
+                sr.seed = nextseed;
+                devNull1.yield((int) (nextseed >>> 16));
+            }
         }
     }
 
@@ -40,12 +41,14 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+        protected void doLoop(Loop loop, DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
             try {
-                long oldseed = (long) seedGetter.invokeExact(sr);
-                long nextseed = (oldseed * multiplier + addend) & mask;
-                seedSetter.invokeExact(sr, nextseed);
-                devNull1.yield((int) (nextseed >>> 16));
+                while (loop.nextIteration()) {
+                    long oldseed = (long) seedGetter.invokeExact(sr);
+                    long nextseed = (oldseed * multiplier + addend) & mask;
+                    seedSetter.invokeExact(sr, nextseed);
+                    devNull1.yield((int) (nextseed >>> 16));
+                }
             }
             catch (Throwable t) {
                 throw unchecked(t);
@@ -57,8 +60,10 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
-            devNull1.yield(sr.nextInt());
+        protected void doLoop(Loop loop, DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+            while (loop.nextIteration()) {
+                devNull1.yield(sr.nextInt());
+            }
         }
     }
 
@@ -67,9 +72,11 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+        protected void doLoop(Loop loop, DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
             try {
-                devNull1.yield((int) nextIntMH.invokeExact(sr));
+                while (loop.nextIteration()) {
+                    devNull1.yield((int) nextIntMH.invokeExact(sr));
+                }
             }
             catch (Throwable t) {
                 throw MHThrows.unchecked(t);
@@ -86,8 +93,10 @@ public class MHPerfTest extends TestRunner {
         private final SecretRandom sr = new SecretRandom();
 
         @Override
-        protected void doOp(DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
-            devNull1.yield(sra.nextInt(sr));
+        protected void doLoop(Loop loop, DevNull devNull1, DevNull devNull2, DevNull devNull3, DevNull devNull4, DevNull devNull5) {
+            while (loop.nextIteration()) {
+                devNull1.yield(sra.nextInt(sr));
+            }
         }
     }
 
