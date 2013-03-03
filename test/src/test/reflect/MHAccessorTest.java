@@ -24,10 +24,22 @@ public class MHAccessorTest {
 
         Method addM = MHAccessorTest.class.getMethod("add", int.class, int.class);
 
-        System.out.println(addM.invoke(t, 1, 2));
+        try {
+            System.out.println(addM.invoke(t, 1, 2d));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("-------------------");
 
         MethodAccessor addA = MHAccessors.newMethodAccessor(addM);
 
-        System.out.println(addA.invoke(t, new Object[]{1, 2d}));
+        try {
+            System.out.println(addA.invoke(t, new Object[]{1, 2d}));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
